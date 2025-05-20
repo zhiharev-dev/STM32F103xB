@@ -48,6 +48,8 @@ void UsageFault_Handler(void);
 
 void SysTick_Handler(void);
 
+void PVD_IRQHandler(void);
+
 /* Exported callback function prototypes ----------------------------------- */
 
 #ifdef __cplusplus

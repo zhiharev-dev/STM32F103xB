@@ -34,6 +34,9 @@
 /* Системный таймер (1 мс) */
 volatile uint32_t systick;
 
+/* Состояние VDD */
+volatile bool vdd_is_lower;
+
 /* Private function prototypes --------------------------------------------- */
 
 static void setup_hardware(void);
@@ -43,6 +46,8 @@ static void setup_vector_table(void);
 static void app_main(void);
 
 static void systick_init(const uint32_t frequency);
+
+static void pwr_init(void);
 
 /* Private user code ------------------------------------------------------- */
 
@@ -76,6 +81,7 @@ static void setup_hardware(void)
     setup_vector_table();
 
     systick_init(HSI_CLOCK);
+    pwr_init();
 }
 /* ------------------------------------------------------------------------- */
 
@@ -107,5 +113,31 @@ static void systick_init(const uint32_t frequency)
               SysTick_CTRL_CLKSOURCE_Msk
             | SysTick_CTRL_TICKINT_Msk
             | SysTick_CTRL_ENABLE_Msk);
+}
+/* ------------------------------------------------------------------------- */
+
+static void pwr_init(void)
+{
+    /* Включить тактирование */
+    SET_BIT(RCC->APB1ENR, RCC_APB1ENR_PWREN_Msk);
+
+    /* Отключить защиту домена резервного копирования */
+    SET_BIT(PWR->CR, PWR_CR_DBP_Msk);
+
+    /* Включить и настроить уровень PVD 2.9V */
+    SET_BIT(PWR->CR,
+            PWR_CR_PVDE_Msk
+          | PWR_CR_PLS_Msk);
+
+    /* Разрешить прерывание EXTI PVD output */
+    SET_BIT(EXTI->IMR, EXTI_IMR_MR16_Msk);
+    /* Включить Rising Trigger */
+    SET_BIT(EXTI->RTSR, EXTI_RTSR_TR16_Msk);
+    /* Включить Falling Trigger */
+    SET_BIT(EXTI->FTSR, EXTI_FTSR_TR16_Msk);
+
+    /* Настроить NVIC */
+    NVIC_SetPriority(PVD_IRQn, 5);
+    NVIC_EnableIRQ(PVD_IRQn);
 }
 /* ------------------------------------------------------------------------- */

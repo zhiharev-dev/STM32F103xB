@@ -30,6 +30,9 @@
 /* Системный таймер (1 мс) */
 extern volatile uint32_t systick;
 
+/* Состояние VDD */
+extern volatile bool vdd_is_lower;
+
 /* Private function prototypes --------------------------------------------- */
 
 /* Private user code ------------------------------------------------------- */
@@ -72,6 +75,19 @@ void SysTick_Handler(void)
      */
     if (READ_BIT(SysTick->CTRL, SysTick_CTRL_COUNTFLAG_Msk)) {
         systick++;
+    }
+}
+/* ------------------------------------------------------------------------- */
+
+void PVD_IRQHandler(void)
+{
+    /* Проверить статус внешнего прерывания EXTI PVD output */
+    if (READ_BIT(EXTI->PR, EXTI_PR_PR16_Msk)) {
+        /* Сбросить статус EXTI */
+        SET_BIT(EXTI->PR, EXTI_PR_PR16_Msk);
+
+        /* Обновить состояние VDD */
+        vdd_is_lower = READ_BIT(PWR->CSR, PWR_CSR_PVDO_Msk) ? true : false;
     }
 }
 /* ------------------------------------------------------------------------- */
