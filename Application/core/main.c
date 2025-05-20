@@ -18,6 +18,7 @@
 /* Includes ---------------------------------------------------------------- */
 
 #include "main.h"
+#include "led.h"
 
 /* Private macros ---------------------------------------------------------- */
 
@@ -49,6 +50,12 @@ volatile uint32_t systick;
 /* Состояние VDD */
 volatile bool vdd_is_lower;
 
+/* LEDs */
+struct led led_blue = {
+    .gpio = GPIOB,
+    .pin = GPIO_ODR_ODR2,
+};
+
 /* Private function prototypes --------------------------------------------- */
 
 static void setup_hardware(void);
@@ -65,6 +72,12 @@ static void flash_init(void);
 
 static void rcc_init(void);
 
+static void afio_init(void);
+
+static void gpio_init(void);
+
+static void gpio_led_init(void);
+
 /* Private user code ------------------------------------------------------- */
 
 int main(void)
@@ -79,13 +92,23 @@ void error(void)
     __disable_irq();
 
     while (true) {
-        continue;
+        /* Задержка */
+        for (uint32_t i = 0; i < 3600; i++) {
+            for (uint32_t j = 0; j < 1000; j++) {
+                continue;
+            }
+        }
+        /* Мигание светодиода - Ошибка */
+        led_toggle(&led_blue);
     }
 }
 /* ------------------------------------------------------------------------- */
 
 static void app_main(void)
 {
+    /* Включить светодиод - Рабочее состояние */
+    led_on(&led_blue);
+
     while (true) {
         continue;
     }
@@ -101,6 +124,8 @@ static void setup_hardware(void)
     flash_init();
     rcc_init();
     systick_init(RCC_CPU_CLOCK);
+    afio_init();
+    gpio_init();
 }
 /* ------------------------------------------------------------------------- */
 
@@ -237,5 +262,42 @@ static void rcc_init(void)
             0x02 << RCC_CFGR_SWS_Pos) {
         continue;
     }
+}
+/* ------------------------------------------------------------------------- */
+
+static void afio_init(void)
+{
+    /* Включить тактирование */
+    SET_BIT(RCC->APB2ENR, RCC_APB2ENR_AFIOEN_Msk);
+
+    /* Настроить Debug = SW */
+    MODIFY_REG(AFIO->MAPR,
+               AFIO_MAPR_SWJ_CFG_Msk,
+               0x02 << AFIO_MAPR_SWJ_CFG_Pos);
+}
+/* ------------------------------------------------------------------------- */
+
+static void gpio_init(void)
+{
+    /* Включить тактирование */
+    SET_BIT(RCC->APB2ENR, RCC_APB2ENR_IOPAEN_Msk);
+    SET_BIT(RCC->APB2ENR, RCC_APB2ENR_IOPBEN_Msk);
+
+    gpio_led_init();
+}
+/* ------------------------------------------------------------------------- */
+
+static void gpio_led_init(void)
+{
+    /* LED_BLUE GPIOB2 */
+
+    /* Начальный уровень = Low */
+    CLEAR_BIT(GPIOB->ODR, GPIO_ODR_ODR2_Msk);
+
+    /* Output Push-Pull 2MHz */
+    MODIFY_REG(GPIOB->CRL,
+               GPIO_CRL_MODE2_Msk
+             | GPIO_CRL_CNF2_Msk,
+               0x02 << GPIO_CRL_MODE2_Pos);
 }
 /* ------------------------------------------------------------------------- */
